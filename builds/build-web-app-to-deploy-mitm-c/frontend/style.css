@@ -1,0 +1,13 @@
+/* Styling Theme */
+:root {
+  --bg: #0a0a0f;
+  --surface: #111118;
+  --border: #1e1e2e;
+  --accent: #7c3aed;
+  --text: #e2e2f0;
+  --success: #22c55e;
+  --danger: #ef4444;
+}
+body { background: var(--bg); color: var(--text); font-family: sans-serif; }
+.app-header { display: flex; justify-content: space-between; padding: 1rem; background: var(--surface); }
+.dashboard-grid { display: grid; gap: 1rem; padding: 1rem; }

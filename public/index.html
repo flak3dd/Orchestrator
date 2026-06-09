@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aether — Software Factory</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Top Bar -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <span class="logo">⚡ AETHER</span>
+      <span class="logo-sub">Software Factory</span>
+    </div>
+    <div class="topbar-center">
+      <span class="phase-badge" id="phase-badge">IDLE</span>
+      <span class="phase-detail" id="phase-detail"></span>
+    </div>
+    <div class="topbar-right">
+      <span class="conn-dot" id="conn-dot"></span>
+      <span class="conn-label" id="conn-label">Connecting...</span>
+      <button class="btn-launch" id="btn-launch" onclick="launchApp()" style="display:none" title="Open generated app in new tab">
+        <span class="btn-launch-icon">▶</span> Launch App
+      </button>
+      <button class="btn-ghost" onclick="openConfig()">⚙ Config</button>
+    </div>
+  </header>
+
+  <!-- Main Layout -->
+  <div class="layout">
+
+    <!-- Left Panel: Agent Graph + Controls -->
+    <aside class="panel panel-left">
+      <section class="agent-graph-section">
+        <h2 class="panel-title">Agent Swarm</h2>
+        <svg id="agent-graph" viewBox="0 0 280 340" width="100%">
+          <!-- Orchestrator (center top) -->
+          <g id="node-orchestrator" class="agent-node" onclick="focusAgent('orchestrator')">
+            <rect x="80" y="16" width="120" height="44" rx="8"/>
+            <text x="140" y="33" class="node-label">Orchestrator</text>
+            <text x="140" y="49" class="node-sub">Planning &amp; routing</text>
+            <circle class="pulse-ring" cx="140" cy="38" r="34"/>
+          </g>
+          <!-- Edges from orchestrator -->
+          <line id="edge-recon"     class="edge" x1="104" y1="60" x2="50"  y2="118" marker-end="url(#ah)"/>
+          <line id="edge-codegen"   class="edge" x1="124" y1="60" x2="90"  y2="118" marker-end="url(#ah)"/>
+          <line id="edge-reviewer"  class="edge" x1="140" y1="60" x2="140" y2="118" marker-end="url(#ah)"/>
+          <line id="edge-testing"   class="edge" x1="156" y1="60" x2="190" y2="118" marker-end="url(#ah)"/>
+          <line id="edge-infra"     class="edge" x1="176" y1="60" x2="230" y2="118" marker-end="url(#ah)"/>
+          <!-- Recon -->
+          <g id="node-recon" class="agent-node" onclick="focusAgent('recon')">
+            <rect x="10" y="118" width="80" height="44" rx="8"/>
+            <text x="50" y="135" class="node-label">Recon</text>
+            <text x="50" y="151" class="node-sub">Research</text>
+            <circle class="pulse-ring" cx="50" cy="140" r="26"/>
+          </g>
+          <!-- CodeGen -->
+          <g id="node-codegen" class="agent-node" onclick="focusAgent('codegen')">
+            <rect x="100" y="118" width="80" height="44" rx="8"/>
+            <text x="140" y="135" class="node-label">CodeGen</text>
+            <text x="140" y="151" class="node-sub">Generate</text>
+            <circle class="pulse-ring" cx="140" cy="140" r="26"/>
+          </g>
+          <!-- Reviewer -->
+          <g id="node-reviewer" class="agent-node" onclick="focusAgent('reviewer')">
+            <rect x="190" y="118" width="80" height="44" rx="8"/>
+            <text x="230" y="135" class="node-label">Reviewer</text>
+            <text x="230" y="151" class="node-sub">Lint &amp; check</text>
+            <circle class="pulse-ring" cx="230" cy="140" r="26"/>
+          </g>
+          <!-- Review→CodeGen feedback loop -->
+          <path id="edge-feedback" class="edge edge-feedback" d="M190 155 C 170 180, 160 180, 140 162" marker-end="url(#ah-warn)"/>
+          <!-- Testing -->
+          <g id="node-testing" class="agent-node" onclick="focusAgent('testing')">
+            <rect x="100" y="210" width="80" height="44" rx="8"/>
+            <text x="140" y="227" class="node-label">Testing</text>
+            <text x="140" y="243" class="node-sub">Run &amp; validate</text>
+            <circle class="pulse-ring" cx="140" cy="232" r="26"/>
+          </g>
+          <!-- Infra -->
+          <g id="node-infra" class="agent-node" onclick="focusAgent('infra')">
+            <rect x="190" y="210" width="80" height="44" rx="8"/>
+            <text x="230" y="227" class="node-label">Infra</text>
+            <text x="230" y="243" class="node-sub">Docker &amp; CI</text>
+            <circle class="pulse-ring" cx="230" cy="232" r="26"/>
+          </g>
+          <!-- CodeGen→Testing, Reviewer→Testing, Reviewer→Infra edges -->
+          <line class="edge" x1="140" y1="162" x2="140" y2="210" marker-end="url(#ah)"/>
+          <line class="edge" x1="220" y1="162" x2="200" y2="210" marker-end="url(#ah)"/>
+          <line class="edge" x1="250" y1="162" x2="250" y2="210" marker-end="url(#ah)"/>
+
+          <!-- Approval gate -->
+          <g id="node-gate" class="agent-node gate-node" onclick="approveBuild()">
+            <rect x="85" y="282" width="110" height="40" rx="20"/>
+            <text x="140" y="298" class="node-label">Deploy Gate</text>
+            <text x="140" y="313" class="node-sub">Click to approve</text>
+          </g>
+          <line class="edge" x1="140" y1="254" x2="140" y2="282" marker-end="url(#ah)"/>
+          <line class="edge" x1="230" y1="254" x2="180" y2="282" marker-end="url(#ah)"/>
+
+          <defs>
+            <marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+              <path d="M2 1L8 5L2 9" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </marker>
+            <marker id="ah-warn" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+              <path d="M2 1L8 5L2 9" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke="#f59e0b"/>
+            </marker>
+          </defs>
+        </svg>
+      </section>
+
+      <!-- Build Controls -->
+      <section class="build-controls">
+        <h2 class="panel-title">Build</h2>
+        <textarea id="goal-input" placeholder="Describe the system to build…&#10;e.g. SynaptiQ platform with offensive threat analysis and defensive firewall monitor dashboards" rows="4"></textarea>
+        <div class="controls-row">
+          <button class="btn-primary" id="btn-build" onclick="startBuild()">▶ Build System</button>
+          <button class="btn-ghost" id="btn-approve" onclick="approveBuild()" disabled>✓ Approve</button>
+          <button class="btn-ghost" id="btn-reset" onclick="resetBuild()">↺ Reset</button>
+        </div>
+      </section>
+
+      <!-- Component Plan -->
+      <section class="plan-section">
+        <h2 class="panel-title">Plan</h2>
+        <div id="plan-list" class="plan-list">
+          <span class="empty-hint">No plan yet — start a build</span>
+        </div>
+      </section>
+    </aside>
+
+    <!-- Center Panel: Terminal -->
+    <main class="panel panel-center">
+      <div class="terminal-header">
+        <span class="terminal-title">▌ Agent Terminal</span>
+        <span class="terminal-filter-row">
+          <label><input type="checkbox" id="filter-info" checked onchange="renderLogs()"> info</label>
+          <label><input type="checkbox" id="filter-success" checked onchange="renderLogs()"> success</label>
+          <label><input type="checkbox" id="filter-warn" checked onchange="renderLogs()"> warn</label>
+          <label><input type="checkbox" id="filter-error" checked onchange="renderLogs()"> error</label>
+        </span>
+        <button class="btn-ghost btn-sm" onclick="clearLogs()">clear</button>
+      </div>
+      <div id="terminal" class="terminal"></div>
+
+      <!-- LLM Stream Ticker -->
+      <div id="llm-ticker" class="llm-ticker" style="display:none">
+        <span class="llm-ticker-label">LLM ▸</span>
+        <span id="llm-ticker-text" class="llm-ticker-text"></span>
+        <span class="llm-ticker-cursor">█</span>
+      </div>
+
+      <!-- Stats bar -->
+      <div class="stats-bar" id="stats-bar" style="display:none">
+        <div class="stat"><span class="stat-val" id="stat-files">0</span><span class="stat-lbl">files</span></div>
+        <div class="stat"><span class="stat-val" id="stat-components">0</span><span class="stat-lbl">components</span></div>
+        <div class="stat"><span class="stat-val" id="stat-tests-pass" style="color:var(--success)">0</span><span class="stat-lbl">passed</span></div>
+        <div class="stat"><span class="stat-val" id="stat-tests-fail" style="color:var(--danger)">0</span><span class="stat-lbl">failed</span></div>
+        <div class="stat"><span class="stat-val" id="stat-duration">—</span><span class="stat-lbl">duration</span></div>
+      </div>
+    </main>
+
+    <!-- Right Panel: File Explorer + Config -->
+    <aside class="panel panel-right">
+      <section class="explorer-section">
+        <h2 class="panel-title">
+          File Explorer
+          <button class="btn-ghost btn-sm" onclick="refreshFiles()">↻</button>
+        </h2>
+        <div id="file-tree" class="file-tree">
+          <span class="empty-hint">No files yet</span>
+        </div>
+      </section>
+
+      <section class="file-preview-section" id="preview-section" style="display:none">
+        <div class="preview-header">
+          <span id="preview-filename" class="preview-filename"></span>
+          <button class="btn-ghost btn-sm" onclick="closePreview()">✕</button>
+        </div>
+        <pre id="file-preview" class="file-preview"></pre>
+      </section>
+    </aside>
+  </div>
+
+  <!-- Config Modal -->
+  <div id="config-modal" class="modal-overlay" style="display:none" onclick="closeConfig(event)">
+    <div class="modal-box" onclick="event.stopPropagation()">
+      <h3 class="modal-title">⚙ LLM Configuration</h3>
+      <p class="modal-hint">Configure an API key to use real LLM completions. Leave blank for Simulation Mode.</p>
+      <label class="field-label">Anthropic (Claude)
+        <input type="password" id="cfg-anthropic" placeholder="sk-ant-...">
+      </label>
+      <label class="field-label">OpenAI
+        <input type="password" id="cfg-openai" placeholder="sk-...">
+      </label>
+      <label class="field-label">Google Gemini
+        <input type="password" id="cfg-gemini" placeholder="AIza...">
+      </label>
+      <label class="field-label">Ollama Base URL
+        <input type="text" id="cfg-ollama" placeholder="http://localhost:11434">
+      </label>
+      <div class="modal-actions">
+        <button class="btn-primary" onclick="saveConfig()">Save</button>
+        <button class="btn-ghost" onclick="closeConfig()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

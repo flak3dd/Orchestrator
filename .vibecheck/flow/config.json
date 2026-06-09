@@ -1,0 +1,13 @@
+{
+  "version": "1.0.0",
+  "projectName": "siniaq",
+  "userName": "developer",
+  "skillLevel": "intermediate",
+  "outputFolder": ".vibecheck/flow",
+  "planningArtifacts": ".vibecheck/flow/planning-artifacts",
+  "implementationArtifacts": ".vibecheck/flow/implementation-artifacts",
+  "installedAt": "2026-06-09T12:59:45.582Z",
+  "ide": [
+    "cursor"
+  ]
+}
