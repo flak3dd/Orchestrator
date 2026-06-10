@@ -1,132 +1,144 @@
-# ⚡ Aether — Multi-Agent Software Factory
+# ⚡ Aether v3 — Foreman Mode
 
-Aether is a multi-agent orchestrator that plans, researches, generates, reviews, tests, and packages complex applications from a single natural-language goal. It ships with a real-time cyberpunk web dashboard and a developer CLI.
+A single locus of intent with ephemeral specialist workers, a git-backed memory, continuous verification, and an adversarial Critic.
 
 ---
 
-## Quick Start
+## The Three Principles
 
-```bash
-# 1. Install dependencies
-npm install
-
-# 2. (Optional) Configure an LLM provider
-cp .env.example .env
-# Edit .env and add your ANTHROPIC_API_KEY (or OpenAI / Gemini / Ollama)
-
-# 3. Start the server
-node server.js
-
-# 4. Open the dashboard
-open http://localhost:3000
-```
-
-Enter a goal and click **▶ Build System**. If no API key is configured, Aether runs in rich **Simulation Mode** — you'll see the full agent pipeline execute with realistic file generation.
+| Principle | What it means |
+|---|---|
+| **Repo is the mind** | State lives in git, not the transcript. Every write commits. Context is reconstructed from the ledger each turn — history is bounded and disposable. |
+| **Verification is continuous** | DoD checks run incrementally after every write. The dashboard shows a live burn-down chart. Flat burn-down auto-triggers strategy escalation. |
+| **Agents are ephemeral** | Workers are spawned as tools, run in parallel with file leases, return a diff, and die. One mind holds the plan; many hands do the work. |
 
 ---
 
 ## Architecture
 
 ```
-aether/
-├── server.js              Express + WebSocket server
-├── bin/cli.js             Developer CLI
+siniaq/
+├── server.js                      Express + WebSocket bridge
+├── skill-library.json             Cross-build persistent lessons (auto-created)
 ├── src/
-│   ├── orchestrator.js    State machine + pipeline coordinator
-│   ├── sandbox.js         File-safe build output manager
-│   └── agents/
-│       ├── base.js        Base agent (LLM dispatch, logging)
-│       ├── recon.js       Goal analysis + codebase scanning
-│       ├── codegen.js     Code & file generation
-│       ├── reviewer.js    Static analysis + LLM-as-judge
-│       ├── infra.js       Dockerfile, docker-compose, CI workflow
-│       └── testing.js     Unit tests + self-correction trigger
-├── public/                Cyberpunk dashboard
-│   ├── index.html
-│   ├── style.css
-│   └── app.js
-└── builds/                All generated output (sandboxed here)
+│   ├── foreman.js                 The Foreman — single locus of intent
+│   ├── ledger.js                  Git-backed Project Ledger (structured state)
+│   ├── dod-runner.js              Continuous DoD executor + burn-down + stall detection
+│   ├── critic.js                  Adversarial Critic (additive-only DoD amendments)
+│   ├── worker.js                  Ephemeral worker spawner with file-lease enforcement
+│   ├── failure-classifier.js      Failure taxonomy + 5-rung escalation ladder
+│   ├── skill-library.js           Cross-build lesson distillation and retrieval
+│   └── tools/
+│       └── index.js               Foreman toolbox (incl. spawn_worker, amend_dod, rollback)
+└── public/                        4-column live dashboard
+    ├── index.html                 Layout: Goal/DoD | Log | Workers/Critic | Queue/Stats
+    ├── style.css                  Dark UI with burn-down chart
+    └── app.js                     WebSocket listener + all v3 event handlers
 ```
 
 ---
 
-## Pipeline
+## The Foreman Loop
 
-```
-Goal → Recon → [CodeGen → Review]×N → Testing → Infra → Deploy Gate → Done
-                     ↑_______↓ (self-correction loop, up to 3 attempts)
-```
-
-1. **Recon** — scans workspace, decomposes goal into components, infers tech stack
-2. **CodeGen** — generates source files per component using LLM or simulation templates
-3. **Reviewer** — static analysis (AST-level checks, security scan, LLM-as-judge)
-4. **Self-correction loop** — if review fails, errors are fed back to CodeGen (max 3 attempts)
-5. **Testing** — runs structural/syntactic test suite, reports failures
-6. **Infra** — generates Dockerfile, docker-compose, deploy.sh, GitHub Actions workflow
-7. **Human-in-the-Loop Gate** — pauses and waits for user approval before deploying
-8. **Deploy** — dry-run finalizes deployment artifacts in `./builds/`
-
----
-
-## CLI
-
-```bash
-# Build from command line
-node bin/cli.js build --goal "REST API with auth and PostgreSQL"
-
-# Auto-approve deployment gate
-node bin/cli.js build --goal "SynaptiQ platform" --no-approve
-
-# Custom output directory
-node bin/cli.js build --goal "..." --builds ./output
+```mermaid
+flowchart TD
+    A[Goal] --> B[Foreman drafts DoD v1 — executable checks]
+    B --> C[Turn: reconstruct context from repo + ledger]
+    C --> D{Plan step}
+    D -- own work --> E[Tool call in sandbox]
+    D -- delegable --> F[spawn_worker with contract + file lease]
+    D -- fork --> G[Async human decision queue]
+    E --> H[Commit + incremental DoD checks]
+    F --> H
+    G --> H
+    H --> I{Burn-down moving?}
+    I -- stalled --> J[Escalate: retry → fix → rollback → re-plan → human]
+    J --> C
+    I -- yes --> C
+    I -- all checks green --> K[Critic pass: adversarial tests]
+    K -- new checks added --> C
+    K -- critic satisfied --> L[Distill lessons → skill library]
+    L --> M[✅ Build complete]
 ```
 
 ---
 
-## LLM Providers
+## New Tools (v3)
 
-Configure in `.env` or via the dashboard ⚙ Config panel:
-
-| Provider  | Variable           | Model used         |
-|-----------|--------------------|--------------------|
-| Anthropic | `ANTHROPIC_API_KEY` | claude-opus-4-5    |
-| OpenAI    | `OPENAI_API_KEY`   | gpt-4o             |
-| Gemini    | `GEMINI_API_KEY`   | gemini-1.5-pro     |
-| Ollama    | `OLLAMA_URL`       | llama3 (local)     |
-
-Without any key, **Simulation Mode** generates realistic code templates.
+| Tool | Description |
+|---|---|
+| `spawn_worker` | Delegate parallelisable subtasks to ephemeral workers with file leases |
+| `amend_dod` | Add checks to the DoD (additive-only; scope reductions need human sign-off) |
+| `rollback` | `git checkout` to the last `dod-green` tag |
+| `queue_question` | Post async question — build continues, human answers in the queue panel |
+| `read_ledger` | Read decisions, constraints, failed approaches, DoD state |
+| `update_ledger` | Write decisions/constraints/failed approaches to the ledger |
 
 ---
 
-## Safety
+## What's New vs v2
 
-- All file writes are sandboxed to `./builds/` — Aether cannot overwrite its own source
-- Path traversal is blocked at the Sandbox layer
-- The deploy gate prevents any `docker-compose up` without explicit human approval
-- Shell commands run as dry-runs by default
-
----
-
-## Example Goal
-
-```
-SynaptiQ Platform with Offensive (threat analysis dashboard)
-and Defensive (firewall log monitor) wings
-```
-
-Generated output in `./builds/synaptiq-platform-with-offe/`:
-- `frontend/` — React dashboard
-- `backend/` — Node.js API + WebSocket server
-- `offensive/` — ThreatAnalyzer with signature matching
-- `defensive/` — FirewallMonitor with real-time alerting
-- `Dockerfile`, `docker-compose.yml`, `deploy.sh`
-- `.github/workflows/ci.yml`
-- `README.md`
+| Feature | v2 (Architect) | v3 (Foreman) |
+|---|---|---|
+| **Memory** | In-memory scratchpad (lost on crash) | Git-committed ledger (survives anything) |
+| **Rollback** | None | `git checkout dod-green` |
+| **Verification** | End-loaded (verify once at claim of completion) | Continuous (after every write) |
+| **Thrash detection** | None | Burn-down slope — flat for N turns = escalate |
+| **Workers** | Serial (Foreman types everything) | Parallel ephemeral workers with file leases |
+| **Second perspective** | None | Adversarial Critic (additive-only DoD power) |
+| **Failure handling** | Log-stuffing (all failures treated equally) | Taxonomy + 5-rung escalation ladder |
+| **Human gate** | Blocking `ask_human` (world stops) | Async decision queue (build continues) |
+| **Cross-build learning** | Starts cold every build | Skill library — retrieves relevant lessons at start |
 
 ---
 
-## Requirements
+## Getting Started
 
+### 1. Prerequisites
 - Node.js ≥ 18
-- npm ≥ 9
-# Orchestrator
+- Git (must be on PATH — the Foreman uses it to commit workspace state)
+
+### 2. Install
+```bash
+npm install
+```
+
+### 3. Configure
+```env
+# .env
+ANTHROPIC_API_KEY=sk-ant-...
+PORT=3000
+
+# Optional
+CRITIC_MODEL=claude-haiku-4-5   # defaults to same model as Foreman
+MAX_WORKERS=3                    # max parallel workers (default: 3)
+```
+
+### 4. Run
+```bash
+npm run dev       # with live reload
+# or
+npm start
+```
+
+### 5. Open
+**[http://localhost:3000](http://localhost:3000)**
+
+Enter a goal in the left panel and click **Begin Build**.
+
+---
+
+## Dashboard Panels
+
+| Panel | Contents |
+|---|---|
+| **Goal / DoD** | Goal input, Definition-of-Done checklist, live burn-down spark-line |
+| **Decision Log** | Turn-by-turn Foreman reasoning, tool calls, results (filterable) |
+| **Workers** | Spawned worker cards with status, task, file lease, and summary |
+| **Critic** | Adversarial verdict, new checks added, test files written |
+| **Decision Queue** | Async human questions — answer without stopping the build |
+| **Stats** | Turn count, tool calls, workers spawned, elapsed time |
+| **Workspace** | Files written to the build workspace |
+
+*verified by vibecheck*
+# siniaq
